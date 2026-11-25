@@ -6,6 +6,7 @@ import {
   CheckSquare,
   BookOpen,
   Mail,
+  BookMarked,
   RefreshCw,
   Menu,
   X,
@@ -20,8 +21,9 @@ import { VaultWidget } from "./VaultWidget";
 import { GmailWidget } from "./GmailWidget";
 import { TidesWeatherWidget } from "./TidesWeatherWidget";
 import { MealsWidget, ScheduleWidget } from "./ScheduleMealsWidget";
+import { SystemGuideWidget } from "./SystemGuideWidget";
 
-type SectionFilter = "overview" | "tasks" | "vault" | "comms";
+type SectionFilter = "overview" | "tasks" | "vault" | "comms" | "guide";
 
 export function DashboardShell({ authRequired }: { authRequired: boolean }) {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -75,6 +77,7 @@ export function DashboardShell({ authRequired }: { authRequired: boolean }) {
       icon: Mail,
       badge: data?.gmail.length,
     },
+    { id: "guide", label: "System Guide", icon: BookMarked },
   ];
 
   const SidebarContent = (
@@ -297,11 +300,13 @@ export function DashboardShell({ authRequired }: { authRequired: boolean }) {
                 onUpdated={() => loadDashboard(true)}
               />
             </div>
-          ) : (
+          ) : section === "comms" ? (
             <div className="grid gap-4 md:grid-cols-2">
               <GmailWidget items={data.gmail} />
               <ScheduleWidget events={data.events} />
             </div>
+          ) : (
+            <SystemGuideWidget />
           )}
         </main>
       </div>
