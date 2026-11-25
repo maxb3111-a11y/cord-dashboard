@@ -1,16 +1,22 @@
 import type { VaultNotePreview } from "./types";
 
-const OWNER = process.env.GITHUB_REPO_OWNER || "maxb3111-a11y";
-const REPO = process.env.GITHUB_REPO_NAME || "home";
-const BRANCH = process.env.GITHUB_REPO_BRANCH || "main";
+function getRepoConfig() {
+  return {
+    owner: (process.env.GITHUB_REPO_OWNER || "maxb3111-a11y").trim(),
+    repo: (process.env.GITHUB_REPO_NAME || "home").trim(),
+    branch: (process.env.GITHUB_REPO_BRANCH || "main").trim(),
+    token: (process.env.GITHUB_TOKEN || "").trim(),
+  };
+}
 
 export function isVaultConfigured(): boolean {
-  return Boolean(process.env.GITHUB_TOKEN?.trim());
+  return Boolean(getRepoConfig().token);
 }
 
 function ghHeaders() {
+  const { token } = getRepoConfig();
   return {
-    Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+    Authorization: `Bearer ${token}`,
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": "2022-11-28",
     "Content-Type": "application/json",
@@ -28,9 +34,10 @@ export async function readVaultFile(
   path: string
 ): Promise<VaultNotePreview | null> {
   if (!isVaultConfigured()) return null;
-  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodePath(
+  const { owner, repo, branch } = getRepoConfig();
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodePath(
     path
-  )}?ref=${encodeURIComponent(BRANCH)}`;
+  )}?ref=${encodeURIComponent(branch)}`;
 
   const res = await fetch(url, {
     headers: ghHeaders(),
@@ -68,14 +75,15 @@ export async function writeVaultFile(
   }
 
   const existing = await readVaultFile(path);
-  const url = `https://api.github.com/repos/${OWNER}/${REPO}/contents/${encodePath(
+  const { owner, repo, branch } = getRepoConfig();
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodePath(
     path
   )}`;
 
   const body: Record<string, string> = {
     message: commitMessage,
     content: Buffer.from(content, "utf8").toString("base64"),
-    branch: BRANCH,
+    branch,
   };
   if (existing?.sha) {
     body.sha = existing.sha;
@@ -89,7 +97,11 @@ export async function writeVaultFile(
 
   if (!res.ok) {
     const errText = await res.text();
-    return { ok: false, path, error: `GitHub ${res.status}: ${errText}` };
+    return {
+      ok: false,
+      path,
+      error: `GitHub ${res.status} (${owner}/${repo}@${branch}): ${errText}`,
+    };
   }
   return { ok: true, path };
 }
